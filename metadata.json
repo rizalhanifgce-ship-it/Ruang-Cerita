@@ -1,0 +1,8 @@
+{
+  "name": "Remix Ruang Cerita - Layanan BK, Pengaduan \u0026 Konseling Siswa",
+  "description": "Aplikasi Ruang Cerita untuk layanan pengaduan dan konseling siswa terintegrasi WhatsApp Guru BK dengan rekapan data pengunjung khusus guru BK.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

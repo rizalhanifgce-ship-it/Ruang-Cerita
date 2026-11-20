@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && (
+          request.auth.token.email == 'rizalhanif.gce@madrasah.id'
+          || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        );
+    }
+
+    function isValidVisitorRecord(data) {
+      return data.keys().hasAll([
+          'id', 'timestamp', 'studentName', 'studentClass',
+          'serviceType', 'assignedTeacherId', 'assignedTeacherName', 'notes', 'status'
+        ])
+        && data.keys().hasOnly([
+          'id', 'timestamp', 'studentName', 'studentClass', 'serviceType',
+          'studentWhatsapp', 'assignedTeacherId', 'assignedTeacherName',
+          'notes', 'studentPhoto', 'mood', 'status', 'followUpNotes',
+          'counselorNotes', 'handledAt', 'satisfaction'
+        ])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128
+        && data.timestamp is string && data.timestamp.size() >= 1 && data.timestamp.size() <= 64
+        && data.studentName is string && data.studentName.size() >= 1 && data.studentName.size() <= 120
+        && data.studentClass is string && data.studentClass.size() >= 1 && data.studentClass.size() <= 32
+        && data.serviceType in ['konseling', 'pengaduan']
+        && data.assignedTeacherId is string && data.assignedTeacherId.size() >= 1 && data.assignedTeacherId.size() <= 64
+        && data.assignedTeacherName is string && data.assignedTeacherName.size() >= 1 && data.assignedTeacherName.size() <= 120
+        && data.notes is string && data.notes.size() <= 4000
+        && data.status in ['Menunggu', 'Sedang Ditangani', 'Selesai']
+        && (!('studentWhatsapp' in data) || (data.studentWhatsapp is string && data.studentWhatsapp.size() <= 32))
+        && (!('mood' in data) || (data.mood is string && data.mood.size() <= 32))
+        && (!('followUpNotes' in data) || (data.followUpNotes is string && data.followUpNotes.size() <= 4000))
+        && (!('counselorNotes' in data) || (data.counselorNotes is string && data.counselorNotes.size() <= 4000))
+        && (!('handledAt' in data) || (data.handledAt is string && data.handledAt.size() <= 64));
+    }
+
+    match /visitors/{visitorId} {
+      // Only verified Guru BK / Admin can read or list student records (PII protection)
+      allow get: if isValidId(visitorId) && isAdmin();
+      allow list: if isAdmin();
+
+      // Students and Admin can create a new visitor record with valid schema
+      allow create: if isValidId(visitorId)
+        && isValidVisitorRecord(incoming())
+        && (incoming().status == 'Menunggu' || isAdmin());
+
+      // Admin can update any field; students can submit satisfaction survey once
+      allow update: if isValidId(visitorId)
+        && isValidVisitorRecord(incoming())
+        && incoming().id == existing().id
+        && incoming().timestamp == existing().timestamp
+        && (
+          isAdmin()
+          || (
+            !('satisfaction' in existing())
+            && incoming().diff(existing()).affectedKeys().hasOnly(['satisfaction'])
+          )
+        );
+
+      allow delete: if isValidId(visitorId) && isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(settingId) && isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list, create, update, delete: if isAdmin();
+    }
+  }
+}

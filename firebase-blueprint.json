@@ -1,0 +1,44 @@
+{
+  "entities": {
+    "VisitorRecord": {
+      "title": "VisitorRecord",
+      "description": "Data pengaduan atau permohonan konseling siswa yang dikirim ke Guru BK.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string", "maxLength": 64 },
+        "studentName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "studentClass": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "serviceType": { "type": "string", "enum": ["konseling", "pengaduan"] },
+        "studentWhatsapp": { "type": "string", "maxLength": 32 },
+        "assignedTeacherId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "assignedTeacherName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "notes": { "type": "string", "maxLength": 4000 },
+        "mood": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "enum": ["Menunggu", "Sedang Ditangani", "Selesai"] },
+        "followUpNotes": { "type": "string", "maxLength": 4000 },
+        "counselorNotes": { "type": "string", "maxLength": 4000 },
+        "handledAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "timestamp", "studentName", "studentClass", "serviceType", "assignedTeacherId", "assignedTeacherName", "notes", "status"]
+    },
+    "AppSetting": {
+      "title": "AppSetting",
+      "description": "Pengaturan aplikasi seperti Fokus Konseling Harian dan Pengaturan QR Code.",
+      "type": "object",
+      "properties": {
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      }
+    }
+  },
+  "firestore": {
+    "/visitors/{visitorId}": {
+      "schema": { "$ref": "#/entities/VisitorRecord" },
+      "description": "Koleksi utama catatan kunjungan, pengaduan, dan konseling siswa."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/AppSetting" },
+      "description": "Pengaturan publik aplikasi (dailyGoal, qrConfig)."
+    }
+  }
+}
